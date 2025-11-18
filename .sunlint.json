@@ -1,0 +1,8 @@
+{
+  "extends": "@sun/sunlint/recommended",
+  "rules": {
+    "C019": "error",
+    "C006": "warn", 
+    "S005": "error"
+  }
+}
