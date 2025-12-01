@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.core.exceptions import ValidationError
@@ -21,10 +22,8 @@ class User(AbstractUser):
     full_name = models.CharField(max_length=255, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.USER)
-
     activation_token = models.CharField(max_length=255, unique=True, null=True, blank=True)
     activation_expiry = models.DateTimeField(null=True, blank=True)
-
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -44,7 +43,6 @@ class Facility(models.Model):
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     def __str__(self):
         return self.name
 
@@ -52,22 +50,28 @@ class Facility(models.Model):
 class PitchType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
+    def __str__(self):
+        return self.name
+
+class TimeSlot(models.Model):
+    """Khung giờ cố định"""
+    name = models.CharField(max_length=50)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['start_time']
+        unique_together = ('start_time', 'end_time')
 
     def __str__(self):
         return self.name
 
 
 class Pitch(models.Model):
-    facility = models.ForeignKey(
-        Facility,
-        on_delete=models.CASCADE,
-        related_name="pitches",
-        null=True,
-        blank=True
-    )
+    facility = models.ForeignKey(Facility, on_delete=models.CASCADE, related_name="pitches", null=True, blank=True)
     name = models.CharField(max_length=255)
-    address = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
     pitch_type = models.ForeignKey(PitchType, on_delete=models.CASCADE, related_name="pitches")
     base_price_per_hour = models.DecimalField(max_digits=10, decimal_places=2)
     images = models.JSONField(blank=True, null=True)
@@ -79,6 +83,48 @@ class Pitch(models.Model):
         facility_name = self.facility.name if self.facility else "No Facility"
         return f"{self.name} - {facility_name}"
 
+    def get_available_time_slots(self, booking_date):
+        """Lấy các time slot khả dụng cho pitch vào ngày cụ thể"""
+        available_slots = []
+        pitch_time_slots = PitchTimeSlot.objects.filter(
+            pitch=self, 
+            is_available=True
+        ).select_related('time_slot')
+        
+        for pitch_time_slot in pitch_time_slots:
+            if pitch_time_slot.is_available_on_date(booking_date):
+                available_slots.append(pitch_time_slot)
+        
+        self.is_available = len(available_slots) > 0
+        return available_slots
+
+class PitchTimeSlot(models.Model):
+    pitch = models.ForeignKey(Pitch, on_delete=models.CASCADE, related_name='time_slots')
+    time_slot = models.ForeignKey(TimeSlot, on_delete=models.CASCADE, related_name='pitch_slots')
+    is_available = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('pitch', 'time_slot')
+        ordering = ['time_slot__start_time']
+
+    def __str__(self):
+        return f"{self.pitch.name} - {self.time_slot.name}"
+
+    def get_price(self):
+        return self.pitch.base_price_per_hour * self.time_slot.duration_hours()
+
+    def is_available_on_date(self, booking_date):
+        if not self.is_available:
+            return False
+        
+        existing_bookings = Booking.objects.filter(
+            pitch=self.pitch,
+            booking_date=booking_date,
+            time_slot=self,
+            status__in=[BookingStatus.PENDING, BookingStatus.CONFIRMED]  # Dùng enum thay vì string
+        )
+        return not existing_bookings.exists()
 
 class Voucher(models.Model):
     code = models.CharField(max_length=50, unique=True)
@@ -93,12 +139,10 @@ class Voucher(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
-        """Validate voucher dates"""
         if self.start_date and self.end_date and self.start_date > self.end_date:
             raise ValidationError("Ngày bắt đầu phải trước ngày kết thúc.")
 
     def is_valid(self):
-        """Check if voucher is valid for use"""
         today = date.today()
 
         if not self.is_active:
@@ -170,10 +214,7 @@ class Booking(models.Model):
         return False
 
     def clean(self):
-        """Basic validation"""
         errors = {}
-
-        # Date validation
         if self.booking_date and self.booking_date < date.today():
             errors['booking_date'] = "Không thể đặt lịch trong quá khứ."
 
@@ -215,7 +256,7 @@ class Booking(models.Model):
 class Review(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")
     pitch = models.ForeignKey(Pitch, on_delete=models.CASCADE, related_name="reviews")
-    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])  # Rating from 1-5
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -223,9 +264,7 @@ class Review(models.Model):
     class Meta:
         unique_together = ('user', 'pitch')
         ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['pitch', 'rating']),
-        ]
+        indexes = [models.Index(fields=['pitch', 'rating'])]
 
     def __str__(self):
         return f"Review by {self.user.username} for {self.pitch.name} - {self.rating} stars"
@@ -257,3 +296,4 @@ class Favorite(models.Model):
 
     def __str__(self):
         return f"{self.user.username} favorites {self.pitch.name}"
+    

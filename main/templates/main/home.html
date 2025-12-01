@@ -1,0 +1,88 @@
+{% extends 'main/base.html' %} 
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Trang Chủ{% endblock %} 
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="facilities-wrapper">
+    <div class="container py-4">
+
+        <form method="GET" class="search-bar mb-4">
+            <div class="input-group">
+                <input type="text" name="q" value="{{ request.GET.q }}" class="form-control"
+                       placeholder="Tìm kiếm cơ sở theo tên...">
+                <button class="btn btn-primary">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </form>
+
+        {% if facilities %}
+            <div class="section-header mb-4">
+                <h2 class="display-6 fw-bold">Danh Sách Cơ Sở Thể Thao</h2>
+            </div>
+            
+            <div class="row g-3">
+                {% for facility in facilities %}
+                    <div class="col-lg-3 col-md-4 col-sm-6">
+                        <a href="{% url 'facility_detail' facility.id %}" class="facility-link">
+                            <div class="facility-card h-100">
+
+                                <div class="facility-image-wrapper">
+                                    {% if facility.image %}
+                                        <img src="{{ facility.image.url }}" class="facility-image" alt="{{ facility.name }}"
+                                             onerror="this.src='{{ default_facility_image }}'">
+                                    {% else %}
+                                        <img src="{{ default_facility_image }}" 
+                                             class="facility-image" alt="{{ facility.name }}">
+                                    {% endif %}
+                                </div>
+
+                                <div class="facility-content">
+                                    <h6 class="facility-title">{{ facility.name }}</h6>
+                                    <p class="facility-description">{{ facility.description|truncatewords:10 }}</p>
+
+                                    <div class="facility-address mb-2">
+                                        <i class="fas fa-map-marker-alt me-2"></i>
+                                        <span>{{ facility.address }}</span>
+                                    </div>
+
+                                    {% if facility.pitches.all %}
+                                        <div class="pitches-section">
+                                            <h6 class="pitches-title">
+                                                <i class="fas fa-futbol me-2"></i>
+                                                Sân ({{ facility.pitches.count }})
+                                            </h6>
+                                            <div class="pitches-list">
+                                                {% for pitch in facility.pitches.all %}
+                                                    <div class="pitch-item">
+                                                        <span class="pitch-name">{{ pitch.name }}</span>
+                                                        <span class="pitch-type small">{{ pitch.pitch_type.name }}</span>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+
+        {% else %}
+            <div class="empty-state text-center py-5">
+                <div class="empty-icon mb-4">
+                    <i class="fas fa-inbox fa-4x text-muted"></i>
+                </div>
+                <h4 class="text-muted">Không tìm thấy cơ sở</h4>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

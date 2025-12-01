@@ -1,0 +1,107 @@
+.breadcrumb {
+    background: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    color: #6c757d;
+}
+
+.card {
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.btn-dark {
+    background-color: #212529;
+    border-color: #212529;
+    transition: all 0.3s ease;
+}
+
+.btn-dark:hover {
+    background-color: #000;
+    border-color: #000;
+}
+
+.btn-outline-dark:hover {
+    background-color: #212529;
+    border-color: #212529;
+}
+
+.facility-header {
+    border: 1px solid #e0e0e0;
+}
+
+.facility-header h1 {
+    font-size: 1.75rem;
+    font-weight: 500;
+}
+
+.facility-image {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+}
+
+.facility-info p {
+    font-size: 0.95rem;
+}
+
+.facility-description {
+    font-size: 0.9rem;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+
+.pitch-image-wrapper {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.pitch-image {
+    height: 100%;
+    object-fit: cover;
+}
+
+.pitch-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.pitch-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.pitch-type {
+    font-size: 0.9rem;
+}
+
+.pitch-price {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #212529;
+}
+
+.pitch-price-unit {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: #6c757d;
+}
+
+.empty-state {
+    border: 1px solid #e0e0e0;
+}

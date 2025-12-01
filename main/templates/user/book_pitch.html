@@ -1,0 +1,220 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Đặt sân - {{ pitch.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/book_pitch.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'pitch_list' %}">Danh sách sân</a></li>
+                    <li class="breadcrumb-item active">{{ pitch.name }}</li>
+                </ol>
+            </nav>
+            <div class="page-header">
+                <h1 class="mb-2">Đặt Sân: {{ pitch.name }}</h1>
+                <p class="text-muted mb-0">Chọn ngày và khung giờ phù hợp để đặt sân</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-5 mb-4">
+            <div class="card border-0 h-100">
+                <div class="pitch-image-container">
+                    {% if pitch.images and pitch.images|length > 0 %}
+                        <img src="{{ pitch.images.0 }}" class="card-img-top" alt="{{ pitch.name }}"
+                             onerror="this.src='{{ default_pitch_image }}'">
+                    {% else %}
+                        <img src="{{ default_pitch_image }}" class="card-img-top" alt="{{ pitch.name }}">
+                    {% endif %}
+                </div>
+
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h3 class="card-title mb-0 h5 fw-semibold">
+                            {{ pitch.name }}
+                        </h3>
+                        <span class="badge bg-dark pitch-type-badge">
+                            {{ pitch.pitch_type.name }}
+                        </span>
+                    </div>
+
+                    {% if pitch.facility %}
+                    <div class="mb-3 facility-info">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-building me-2 text-muted"></i>
+                            <div>
+                                <strong>{{ pitch.facility.name }}</strong>
+                                {% if pitch.facility.address %}
+                                <div class="text-muted small">{{ pitch.facility.address }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if pitch.facility.description %}
+                        <p class="text-muted small mb-0">{{ pitch.facility.description }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="py-3 px-3 mb-3 price-box">
+                        <div class="text-muted price-label">
+                            Giá thuê cơ bản
+                        </div>
+                        <div class="price-value">
+                            {{ pitch.base_price_per_hour|floatformat:0 }}đ
+                            <span class="price-unit">/giờ</span>
+                        </div>
+                    </div>
+
+                    {% if pitch.pitch_type.description %}
+                    <div class="mb-3 pitch-type-desc">
+                        <h6 class="mb-2">Thông tin loại sân</h6>
+                        <p class="text-muted small mb-0">{{ pitch.pitch_type.description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card border-0">
+                <div class="card-body">
+                    <h4 class="card-title mb-4 section-title">
+                        <i class="fas fa-calendar-alt me-2 text-primary"></i>
+                        Đặt lịch
+                    </h4>
+
+                    <form method="GET" action="" class="mb-4" id="dateSelectionForm">
+                        <div class="mb-3">
+                            <label for="{{ date_form.booking_date.id_for_label }}" class="form-label fw-semibold">
+                                Chọn ngày đặt sân
+                            </label>
+                            {{ date_form.booking_date }}
+                            <div class="form-text">Chọn ngày bạn muốn đặt sân (từ hôm nay trở đi)</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            Xem khung giờ có sẵn
+                        </button>
+                    </form>
+
+                    {% if selected_date %}
+                    <form method="POST" action="{% url 'book_pitch' pitch.id %}" id="bookingForm">
+                        {% csrf_token %}
+                        
+                        <input type="hidden" name="booking_date" value="{{ selected_date }}" id="hiddenBookingDate">
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-clock me-1"></i>
+                                Chọn khung giờ ({{ selected_date }})
+                            </label>
+                            
+                            {% if available_time_slots %}
+                            <div class="row g-3">
+                                {% for slot in available_time_slots %}
+                                <div class="col-md-6">
+                                    <input type="radio" 
+                                           class="btn-check" 
+                                           name="time_slot" 
+                                           id="time_slot_{{ slot.id }}" 
+                                           value="{{ slot.id }}"
+                                           required>
+                                    <label class="time-slot-btn w-100" for="time_slot_{{ slot.id }}">
+                                        <div class="text-muted small mb-1">
+                                            <i class="far fa-clock me-1"></i>
+                                            {{ slot.time_slot.start_time|time:"H:i" }} - {{ slot.time_slot.end_time|time:"H:i" }}
+                                        </div>
+                                        <div class="text-primary fw-semibold">
+                                            <i class="fas fa-tag me-1"></i>
+                                            {{ slot.price|floatformat:0 }}đ
+                                        </div>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Không có khung giờ nào khả dụng cho ngày này. Vui lòng chọn ngày khác.
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if available_time_slots %}
+                        <div class="mb-4">
+                            <label for="id_voucher_code" class="form-label fw-semibold">
+                                <i class="fas fa-ticket-alt me-1"></i>
+                                Mã giảm giá (nếu có)
+                            </label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       name="voucher_code" 
+                                       id="id_voucher_code"
+                                       class="form-control"
+                                       placeholder="Nhập mã giảm giá"
+                                       value="{{ voucher_code }}">
+                                <button type="button" 
+                                        class="btn btn-outline-secondary" 
+                                        onclick="checkVoucher()">
+                                    <i class="fas fa-check me-1"></i>
+                                    Kiểm tra
+                                </button>
+                            </div>
+                            {% if voucher_message %}
+                            <div class="form-text {{ voucher_message_type }} mt-2">
+                                {% if voucher_message_type == 'text-success' %}
+                                <i class="fas fa-check-circle me-1"></i>
+                                {% elif voucher_message_type == 'text-danger' %}
+                                <i class="fas fa-times-circle me-1"></i>
+                                {% endif %}
+                                {{ voucher_message }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="id_note" class="form-label fw-semibold">
+                                <i class="fas fa-sticky-note me-1"></i>
+                                Ghi chú thêm
+                            </label>
+                            <textarea name="note" 
+                                      id="id_note"
+                                      class="form-control"
+                                      rows="3"
+                                      placeholder="Nhập ghi chú của bạn..."></textarea>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Xác nhận đặt sân
+                            </button>
+                        </div>
+                        {% endif %}
+                    </form>
+                    {% else %}
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Vui lòng chọn ngày để xem khung giờ có sẵn
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/book_pitch.js' %}"></script>
+{% endblock %}

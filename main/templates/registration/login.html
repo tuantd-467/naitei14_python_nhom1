@@ -1,0 +1,14 @@
+{% extends "main/base.html" %} {% block title %}Login{% endblock %} 
+{% load crispy_forms_tags %} {% block content %}
+<form method="post">
+  {% csrf_token %}{{ form|crispy }}
+  <p>
+    Chưa có tài khoản?
+    <a href="{% url 'sign_up' %}">Hãy tạo tài khoản mới ở đây</a>!
+  </p>
+  <p>
+    <button type="submit" class="btn btn-success">Đăng nhập</button>
+  </p>
+</form>
+
+{% endblock %}

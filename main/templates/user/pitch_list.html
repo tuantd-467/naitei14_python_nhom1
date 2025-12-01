@@ -1,0 +1,296 @@
+{% extends 'main/base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Danh sách sân{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pitch_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mb-4 page-header">
+        <h1 class="mb-2">Danh Sách Sân Bóng</h1>
+        <p class="text-muted mb-0 page-subtitle">Chọn sân và đặt lịch ngay</p>
+    </div>
+
+    <div class="card border-0 mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3 search-section-title">
+                <i class="fas fa-search me-2"></i>Tìm Kiếm Sân Bóng
+            </h5>
+            
+            <form method="GET" action="{% url 'pitch_list' %}" class="row g-3">
+                <div class="col-lg-4 col-md-6">
+                    <label class="form-label small text-muted mb-1 form-label-small">Tìm theo từ khóa</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" 
+                               name="q" 
+                               class="form-control border-start-0" 
+                               placeholder="Tên sân, cơ sở, địa chỉ..."
+                               value="{{ request_get.q }}">
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label small text-muted mb-1 form-label-small">Loại sân</label>
+                    <select name="pitch_type" class="form-select">
+                        <option value="">Tất cả loại sân</option>
+                        {% for type in pitch_types %}
+                            <option value="{{ type.id }}" 
+                                {% if request_get.pitch_type == type.id|stringformat:"i" %}selected{% endif %}>
+                                {{ type.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label small text-muted mb-1 form-label-small">Mức giá</label>
+                    <select name="price_range" class="form-select">
+                        <option value="">Tất cả mức giá</option>
+                        <option value="0-100000" {% if request_get.price_range == '0-100000' %}selected{% endif %}>
+                            Dưới 100,000đ/giờ
+                        </option>
+                        <option value="100000-200000" {% if request_get.price_range == '100000-200000' %}selected{% endif %}>
+                            100,000đ - 200,000đ/giờ
+                        </option>
+                        <option value="200000-300000" {% if request_get.price_range == '200000-300000' %}selected{% endif %}>
+                            200,000đ - 300,000đ/giờ
+                        </option>
+                        <option value="300000" {% if request_get.price_range == '300000' %}selected{% endif %}>
+                            Trên 300,000đ/giờ
+                        </option>
+                    </select>
+                </div>
+
+                {% if request_get.sort %}
+                <input type="hidden" name="sort" value="{{ request_get.sort }}">
+                {% endif %}
+
+                <div class="col-12 mt-3">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-dark">
+                            <i class="fas fa-search me-1"></i>
+                            Tìm kiếm
+                        </button>
+                        <a href="{% url 'pitch_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo me-1"></i>
+                            Đặt lại
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+            {% if has_filters %}
+            <div class="mt-3 pt-3 border-top">
+                <div class="d-flex align-items-center flex-wrap">
+                    <span class="text-muted small me-2 mb-2">Bộ lọc đang áp dụng:</span>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if request_get.q %}
+                        <span class="badge bg-light text-dark border">
+                            Từ khóa: "{{ request_get.q }}"
+                            <a href="?{{ request_get|param_remove:'q' }}" class="text-muted ms-1">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        </span>
+                        {% endif %}
+                        
+                        {% if request_get.pitch_type %}
+                        {% for type in pitch_types %}
+                            {% if request_get.pitch_type == type.id|stringformat:"i" %}
+                            <span class="badge bg-light text-dark border">
+                                Loại: {{ type.name }}
+                                <a href="?{{ request_get|param_remove:'pitch_type' }}" class="text-muted ms-1">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </span>
+                            {% endif %}
+                        {% endfor %}
+                        {% endif %}
+                        
+                        {% if request_get.price_range %}
+                        <span class="badge bg-light text-dark border">
+                            Giá: {{ request_get.price_range|price_range_display }}
+                            <a href="?{{ request_get|param_remove:'price_range' }}" class="text-muted ms-1">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if pitches %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="text-muted small">
+            Tìm thấy <strong>{{ pitches.paginator.count }}</strong> sân phù hợp
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-sort me-1"></i>
+                {% if request_get.sort == 'name' %}Tên A-Z
+                {% elif request_get.sort == '-name' %}Tên Z-A
+                {% elif request_get.sort == 'price' %}Giá thấp đến cao
+                {% elif request_get.sort == '-price' %}Giá cao đến thấp
+                {% else %}Sắp xếp
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item {% if request_get.sort == 'name' %}active{% endif %}" 
+                       href="?{{ request_get|param_replace:'sort=name' }}">Tên A-Z</a></li>
+                <li><a class="dropdown-item {% if request_get.sort == '-name' %}active{% endif %}" 
+                       href="?{{ request_get|param_replace:'sort=-name' }}">Tên Z-A</a></li>
+                <li><a class="dropdown-item {% if request_get.sort == 'price' %}active{% endif %}" 
+                       href="?{{ request_get|param_replace:'sort=price' }}">Giá thấp đến cao</a></li>
+                <li><a class="dropdown-item {% if request_get.sort == '-price' %}active{% endif %}" 
+                       href="?{{ request_get|param_replace:'sort=-price' }}">Giá cao đến thấp</a></li>
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if pitches %}
+        <div class="row g-3 mb-4">
+            {% for pitch in pitches %}
+                <div class="col-lg-4 col-md-6">
+                    <div class="card border-0 h-100">
+                        <div class="pitch-card-image">
+                            {% if pitch.images and pitch.images|length > 0 %}
+                                <img src="{{ pitch.images.0 }}" class="card-img-top" alt="{{ pitch.name }}"
+                                     onerror="this.src='{{ default_pitch_image }}'">
+                            {% else %}
+                                <img src="{{ default_pitch_image }}" 
+                                     class="card-img-top" alt="{{ pitch.name }}">
+                            {% endif %}
+                            
+                            {% if pitch.is_available %}
+                                <span class="badge bg-success pitch-badge">Còn trống</span>
+                            {% else %}
+                                <span class="badge bg-secondary pitch-badge">Không có sẵn</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0 pitch-card-title">
+                                    {{ pitch.name }}
+                                </h5>
+                                <span class="badge bg-dark pitch-type-badge">
+                                    {{ pitch.pitch_type.name }}
+                                </span>
+                            </div>
+
+                            {% if pitch.facility %}
+                                <p class="text-muted mb-2 pitch-facility-name">
+                                    <i class="fas fa-building me-1"></i>
+                                    {{ pitch.facility.name }}
+                                </p>
+                                {% if pitch.facility.address %}
+                                <p class="text-muted mb-2 pitch-address">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    {{ pitch.facility.address }}
+                                </p>
+                                {% endif %}
+                            {% endif %}
+
+                            <div class="py-2 px-3 mb-3 price-display">
+                                <div class="text-muted price-label">Giá thuê</div>
+                                <div class="price-value">
+                                    {{ pitch.base_price_per_hour|floatformat:0 }}đ
+                                    <span class="price-unit">/giờ</span>
+                                </div>
+                            </div>
+
+                            <a href="{% url 'book_pitch' pitch.id %}" class="btn btn-dark btn-sm w-100 mb-2">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                Xem lịch & Đặt sân
+                            </a>
+                            
+                            {% if not user.is_authenticated %}
+                                <div class="text-center mt-2 login-link">
+                                    <a href="{% url 'login' %}?next={% url 'book_pitch' pitch.id %}" 
+                                       class="text-decoration-none">
+                                        Đăng nhập
+                                    </a>
+                                    để đặt sân
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if pitches.has_other_pages %}
+            <div class="d-flex flex-column align-items-center py-4">
+                <nav aria-label="Điều hướng trang">
+                    <ul class="pagination mb-3">
+                        {% if pitches.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{{ request_get|param_replace:'page=1' }}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pitches.previous_page_number }}&{{ request_get|param_remove:'page' }}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in pitches.paginator.page_range %}
+                            {% if pitches.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > pitches.number|add:'-3' and num < pitches.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}&{{ request_get|param_remove:'page' }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if pitches.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pitches.next_page_number }}&{{ request_get|param_remove:'page' }}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pitches.paginator.num_pages }}&{{ request_get|param_remove:'page' }}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+
+                <div class="text-muted pagination-info">
+                    Trang <strong>{{ pitches.number }}</strong> / <strong>{{ pitches.paginator.num_pages }}</strong>
+                    <span class="mx-2">•</span>
+                    Tổng <strong>{{ pitches.paginator.count }}</strong> sân
+                </div>
+            </div>
+        {% endif %}
+
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-futbol empty-state-icon text-muted mb-3"></i>
+            <h4 class="mb-2 empty-state-title">Không Tìm Thấy Sân Phù Hợp</h4>
+            <p class="text-muted mb-3">Không có sân bóng nào phù hợp với tiêu chí tìm kiếm của bạn</p>
+            <a href="{% url 'pitch_list' %}" class="btn btn-dark">
+                <i class="fas fa-redo me-1"></i>
+                Xem tất cả sân
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

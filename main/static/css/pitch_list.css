@@ -1,0 +1,180 @@
+.page-header h1 {
+    font-size: 1.75rem;
+    font-weight: 500;
+}
+
+.page-subtitle {
+    font-size: 0.9rem;
+}
+
+.card {
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.search-section-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.form-label-small {
+    font-size: 0.875rem;
+}
+
+.btn-dark {
+    background-color: #212529;
+    border-color: #212529;
+    transition: all 0.3s ease;
+}
+
+.btn-dark:hover {
+    background-color: #000;
+    border-color: #000;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+}
+
+.pagination .page-link {
+    color: #212529;
+    border: 1px solid #dee2e6;
+    padding: 0.5rem 0.75rem;
+    margin: 0 2px;
+    transition: all 0.2s ease;
+}
+
+.pagination .page-link:hover {
+    background-color: #212529;
+    color: #fff;
+    border-color: #212529;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #212529;
+    border-color: #212529;
+}
+
+.pagination .page-link:focus {
+    box-shadow: none;
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+}
+
+.input-group .form-control:focus {
+    border-color: #212529;
+    box-shadow: 0 0 0 0.2rem rgba(33, 37, 41, 0.25);
+}
+
+.dropdown-item.active {
+    background-color: #212529;
+    border-color: #212529;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.badge .fas.fa-times {
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: color 0.2s ease;
+}
+
+.badge .fas.fa-times:hover {
+    color: #dc3545 !important;
+}
+
+.form-select:focus {
+    border-color: #212529;
+    box-shadow: 0 0 0 0.2rem rgba(33, 37, 41, 0.25);
+}
+
+.pitch-card-image {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.pitch-card-image img {
+    height: 100%;
+    object-fit: cover;
+}
+
+.pitch-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.pitch-type-badge {
+    font-size: 0.75rem;
+}
+
+.pitch-card-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.pitch-facility-name {
+    font-size: 0.85rem;
+}
+
+.pitch-address {
+    font-size: 0.8rem;
+}
+
+.price-display {
+    background-color: #f8f9fa;
+    border-radius: 6px;
+}
+
+.price-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.price-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+.price-unit {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: #6c757d;
+}
+
+.login-link {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.login-link a {
+    color: #212529;
+    font-weight: 500;
+}
+
+.pagination-info {
+    font-size: 0.9rem;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+}
+
+.empty-state-title {
+    font-size: 1.5rem;
+}
