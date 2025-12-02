@@ -44,9 +44,10 @@
           </ul>
 
           <ul class="navbar-nav">
-            {% if user.is_authenticated %} {% if is_admin %}
+            {% if user.is_authenticated %}
+            {% if is_admin %}
             <li class="nav-item">
-              <a class="nav-link text-danger fw-bold" href="{% url 'admin:index' %}">
+              <a class="nav-link text-danger fw-bold" href="{% url 'admin_booking_list' %}">
                 Quản Trị
               </a>
             </li>

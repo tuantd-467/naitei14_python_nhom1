@@ -1,0 +1,116 @@
+.page-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.page-title {
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.page-subtitle {
+    color: #6c757d;
+    font-size: 0.95rem;
+}
+
+.filter-card .form-select,
+.filter-card .form-control {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    padding: 0.55rem 0.9rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-card .form-select:focus,
+.filter-card .form-control:focus {
+    border-color: #212529;
+    box-shadow: 0 0 0 0.2rem rgba(33, 37, 41, 0.15);
+}
+
+.filter-input::placeholder {
+    color: #adb5bd;
+    font-size: 0.9rem;
+}
+
+.table-card table thead th {
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: #6c757d;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.table-card table tbody td {
+    padding: 1rem 1.25rem;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-pending {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #c58105;
+}
+
+.status-confirmed {
+    background-color: rgba(25, 135, 84, 0.15);
+    color: #198754;
+}
+
+.status-rejected {
+    background-color: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+}
+
+.status-cancelled {
+    background-color: rgba(108, 117, 125, 0.15);
+    color: #6c757d;
+}
+
+.empty-state .empty-icon {
+    font-size: 3rem;
+    opacity: 0.45;
+}
+
+.pagination .page-link {
+    color: #212529;
+    border-radius: 999px;
+    margin: 0 3px;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid #dee2e6;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #212529;
+    border-color: #212529;
+    color: #fff;
+}
+
+.btn-outline-success,
+.btn-outline-danger {
+    border-radius: 999px;
+    padding-inline: 1.1rem;
+}
+
+.btn-outline-success:hover {
+    background-color: #198754;
+    color: #fff;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: #fff;
+}
+

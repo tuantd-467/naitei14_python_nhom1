@@ -28,6 +28,6 @@ DATE_HIERARCHY_BOOKING = 'booking_date'
 READONLY_TIMESTAMP_FIELDS = ('created_at', 'updated_at')
 READONLY_ACTIVATION_FIELDS = ('activation_token', 'activation_expiry')
 
-BOOKING_READONLY_FIELDS = ('created_at', 'updated_at', 'duration_hours', 'final_price', 'time_slot')
+BOOKING_READONLY_FIELDS = ('created_at', 'updated_at', 'duration_hours', 'final_price')
 
 VOUCHER_READONLY_FIELDS = ('created_at', 'used_count')

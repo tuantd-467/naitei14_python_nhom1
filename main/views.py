@@ -9,6 +9,10 @@ from django.contrib import messages
 from datetime import datetime, date
 import re
 
+from django.conf import settings
+from django.core.mail import send_mail
+from django.utils import timezone
+
 from .models import Booking, Facility, Pitch, PitchTimeSlot, PitchType, Voucher, BookingStatus
 from . import constants
 
@@ -323,3 +327,115 @@ def book_pitch(request, pitch_id):
     }
     
     return render(request, 'user/book_pitch.html', context)
+
+
+@login_required(login_url='login')
+def admin_booking_list(request):
+    """Trang admin: xem + filter đơn đặt sân, kèm nút approve/reject."""
+    if not request.user.is_authenticated or request.user.role != constants.ROLE_ADMIN:
+        return HttpResponseForbidden("Bạn không có quyền truy cập trang quản lý đơn đặt sân.")
+
+    status_filter = request.GET.get("status", "")
+    date_from = request.GET.get("date_from", "")
+    date_to = request.GET.get("date_to", "")
+
+    bookings = (
+        Booking.objects
+        .select_related("user", "pitch", "pitch__facility")
+        .all()
+    )
+
+    if status_filter:
+        bookings = bookings.filter(status=status_filter)
+
+    if date_from:
+        try:
+            date_from_parsed = datetime.strptime(date_from, "%Y-%m-%d").date()
+            bookings = bookings.filter(booking_date__gte=date_from_parsed)
+        except ValueError:
+            date_from = ""
+
+    if date_to:
+        try:
+            date_to_parsed = datetime.strptime(date_to, "%Y-%m-%d").date()
+            bookings = bookings.filter(booking_date__lte=date_to_parsed)
+        except ValueError:
+            date_to = ""
+
+    paginator = Paginator(bookings, constants.ADMIN_LIST_PER_PAGE)
+    page_number = request.GET.get("page")
+
+    try:
+        bookings_page = paginator.page(page_number)
+    except PageNotAnInteger:
+        bookings_page = paginator.page(1)
+    except EmptyPage:
+        bookings_page = paginator.page(paginator.num_pages)
+
+    context = {
+        "bookings": bookings_page,
+        "status_filter": status_filter,
+        "date_from": date_from,
+        "date_to": date_to,
+        "status_choices": BookingStatus.choices,
+    }
+    return render(request, "host/pitch_manage.html", context)
+
+
+@login_required(login_url='login')
+def admin_update_booking_status(request, booking_id):
+    """Admin approve/reject đơn và gửi email cho user."""
+    if request.user.role != constants.ROLE_ADMIN:
+        return HttpResponseForbidden("Bạn không có quyền cập nhật đơn đặt sân.")
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Yêu cầu không hợp lệ.")
+
+    booking = get_object_or_404(Booking, pk=booking_id)
+
+    action = request.POST.get("action")
+    if action == "approve":
+        new_status = BookingStatus.CONFIRMED
+        subject = "Đơn đặt sân của bạn đã được xác nhận"
+        message = (
+            f"Xin chào {booking.user.full_name or booking.user.username},\n\n"
+            f"Đơn đặt sân #{booking.id} tại sân {booking.pitch.name} ngày {booking.booking_date} "
+            f"đã được xác nhận.\n\n"
+            "Cảm ơn bạn đã sử dụng dịch vụ!"
+        )
+        success_msg = "Đã xác nhận đơn đặt sân."
+    elif action == "reject":
+        new_status = BookingStatus.REJECTED
+        subject = "Đơn đặt sân của bạn đã bị từ chối"
+        message = (
+            f"Xin chào {booking.user.full_name or booking.user.username},\n\n"
+            f"Rất tiếc, đơn đặt sân #{booking.id} tại sân {booking.pitch.name} ngày {booking.booking_date} "
+            f"đã bị từ chối.\n\n"
+            "Vui lòng liên hệ quản trị viên để biết thêm chi tiết."
+        )
+        success_msg = "Đã từ chối đơn đặt sân."
+    else:
+        messages.error(request, "Hành động không hợp lệ.")
+        return redirect("admin_booking_list")
+
+    booking.status = new_status
+    booking.updated_at = timezone.now()
+    booking.save(update_fields=["status", "updated_at"])
+
+    if booking.user.email:
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                recipient_list=[booking.user.email],
+                fail_silently=True,
+            )
+        except Exception:
+            messages.warning(request, "Cập nhật trạng thái thành công nhưng gửi email thất bại.")
+        else:
+            messages.success(request, f"{success_msg} Email thông báo đã được gửi.")
+    else:
+        messages.success(request, f"{success_msg} (User không có email để gửi thông báo).")
+
+    return redirect("admin_booking_list")
