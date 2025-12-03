@@ -90,26 +90,28 @@
                 <td>{{ booking.booking_date|date:"d/m/Y" }}</td>
                 <td class="fw-semibold">{{ booking.final_price|floatformat:0 }} đ</td>
                 <td>
-                  {% if booking.status == "Pending" %}
+                  {% if booking.status == booking_status.PENDING %}
                     <span class="status-badge status-pending">Đang chờ</span>
-                  {% elif booking.status == "Confirmed" %}
+                  {% elif booking.status == booking_status.CONFIRMED %}
                     <span class="status-badge status-confirmed">Đã xác nhận</span>
-                  {% elif booking.status == "Rejected" %}
+                  {% elif booking.status == booking_status.REJECTED %}
                     <span class="status-badge status-rejected">Bị từ chối</span>
-                  {% elif booking.status == "Cancelled" %}
+                  {% elif booking.status == booking_status.CANCELLED %}
                     <span class="status-badge status-cancelled">Người dùng hủy</span>
                   {% else %}
                     <span class="status-badge">{{ booking.status }}</span>
                   {% endif %}
                 </td>
                 <td class="text-end">
-                  {% if booking.status == "Pending" %}
+                  {% if booking.status == booking_status.PENDING %}
                     <form method="post"
                           action="{% url 'admin_update_booking_status' booking.id %}"
                           class="d-inline">
                       {% csrf_token %}
                       <input type="hidden" name="action" value="approve">
-                      <button type="submit" class="btn btn-sm btn-outline-success me-2">
+                      <button type="submit"
+                              class="btn btn-sm btn-outline-success me-2"
+                              onclick="return confirm('Bạn có chắc chắn muốn duyệt đơn #{{ booking.id }} không?')">
                         Duyệt
                       </button>
                     </form>
@@ -118,7 +120,9 @@
                           class="d-inline">
                       {% csrf_token %}
                       <input type="hidden" name="action" value="reject">
-                      <button type="submit" class="btn btn-sm btn-outline-danger">
+                      <button type="submit"
+                              class="btn btn-sm btn-outline-danger"
+                              onclick="return confirm('Bạn có chắc chắn muốn từ chối đơn #{{ booking.id }} không?')">
                         Từ chối
                       </button>
                     </form>

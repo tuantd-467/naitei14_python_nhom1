@@ -1,4 +1,4 @@
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import SignUpForm, BookingForm, DateSelectionForm
 from django.contrib.auth.decorators import login_required
@@ -10,8 +10,9 @@ from datetime import datetime, date
 import re
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import send_mail, BadHeaderError
 from django.utils import timezone
+from smtplib import SMTPException
 
 from .models import Booking, Facility, Pitch, PitchTimeSlot, PitchType, Voucher, BookingStatus
 from . import constants
@@ -332,7 +333,7 @@ def book_pitch(request, pitch_id):
 @login_required(login_url='login')
 def admin_booking_list(request):
     """Trang admin: xem + filter đơn đặt sân, kèm nút approve/reject."""
-    if not request.user.is_authenticated or request.user.role != constants.ROLE_ADMIN:
+    if request.user.role != constants.ROLE_ADMIN:
         return HttpResponseForbidden("Bạn không có quyền truy cập trang quản lý đơn đặt sân.")
 
     status_filter = request.GET.get("status", "")
@@ -343,6 +344,7 @@ def admin_booking_list(request):
         Booking.objects
         .select_related("user", "pitch", "pitch__facility")
         .all()
+        .order_by("-created_at")
     )
 
     if status_filter:
@@ -353,6 +355,7 @@ def admin_booking_list(request):
             date_from_parsed = datetime.strptime(date_from, "%Y-%m-%d").date()
             bookings = bookings.filter(booking_date__gte=date_from_parsed)
         except ValueError:
+            messages.warning(request, "Định dạng ngày 'từ ngày' không hợp lệ.")
             date_from = ""
 
     if date_to:
@@ -360,6 +363,7 @@ def admin_booking_list(request):
             date_to_parsed = datetime.strptime(date_to, "%Y-%m-%d").date()
             bookings = bookings.filter(booking_date__lte=date_to_parsed)
         except ValueError:
+            messages.warning(request, "Định dạng ngày 'đến ngày' không hợp lệ.")
             date_to = ""
 
     paginator = Paginator(bookings, constants.ADMIN_LIST_PER_PAGE)
@@ -378,6 +382,7 @@ def admin_booking_list(request):
         "date_from": date_from,
         "date_to": date_to,
         "status_choices": BookingStatus.choices,
+        "booking_status": BookingStatus,
     }
     return render(request, "host/pitch_manage.html", context)
 
@@ -389,7 +394,7 @@ def admin_update_booking_status(request, booking_id):
         return HttpResponseForbidden("Bạn không có quyền cập nhật đơn đặt sân.")
 
     if request.method != "POST":
-        return HttpResponseForbidden("Yêu cầu không hợp lệ.")
+        return HttpResponseNotAllowed(["POST"])
 
     booking = get_object_or_404(Booking, pk=booking_id)
 
@@ -418,9 +423,21 @@ def admin_update_booking_status(request, booking_id):
         messages.error(request, "Hành động không hợp lệ.")
         return redirect("admin_booking_list")
 
+    if booking.status != BookingStatus.PENDING:
+        messages.error(request, "Chỉ có thể cập nhật đơn đặt sân đang chờ xác nhận.")
+        return redirect("admin_booking_list")
+
+    old_status = booking.status
     booking.status = new_status
-    booking.updated_at = timezone.now()
-    booking.save(update_fields=["status", "updated_at"])
+    booking.save(update_fields=["status"])
+
+    if (
+        booking.voucher
+        and old_status == BookingStatus.PENDING
+        and new_status == BookingStatus.CONFIRMED
+    ):
+        booking.voucher.used_count += 1
+        booking.voucher.save(update_fields=["used_count"])
 
     if booking.user.email:
         try:
@@ -431,7 +448,7 @@ def admin_update_booking_status(request, booking_id):
                 recipient_list=[booking.user.email],
                 fail_silently=True,
             )
-        except Exception:
+        except (BadHeaderError, SMTPException):
             messages.warning(request, "Cập nhật trạng thái thành công nhưng gửi email thất bại.")
         else:
             messages.success(request, f"{success_msg} Email thông báo đã được gửi.")
