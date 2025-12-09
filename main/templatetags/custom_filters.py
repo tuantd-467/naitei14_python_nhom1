@@ -5,12 +5,10 @@ register = template.Library()
 
 @register.filter
 def get_item(dictionary, key):
-    """Get item from dictionary by key"""
     return dictionary.get(key)
 
 @register.filter
 def param_replace(value, arg):
-    """Replace or add a parameter in the query string"""
     if not isinstance(value, dict):
         return value
     
@@ -35,10 +33,6 @@ def param_replace(value, arg):
 
 @register.filter
 def param_remove(value, key_to_remove):
-    """
-    Remove a GET parameter from query string
-    Usage: {{ request_get|param_remove:"q" }}
-    """
     if not isinstance(value, dict):
         return value
     
@@ -48,7 +42,6 @@ def param_remove(value, key_to_remove):
 
 @register.filter
 def price_range_display(value):
-    """Display price range in human readable format"""
     if isinstance(value, list):
         value = value[0] if value else ''
     
@@ -62,7 +55,6 @@ def price_range_display(value):
 
 @register.filter
 def get_single_value(value):
-    """Get single value from potentially list value"""
     if isinstance(value, list):
         return value[0] if value else ''
     return value

@@ -162,22 +162,31 @@
             {% for pitch in pitches %}
                 <div class="col-lg-4 col-md-6">
                     <div class="card border-0 h-100">
-                        <div class="pitch-card-image">
-                            {% if pitch.images and pitch.images|length > 0 %}
-                                <img src="{{ pitch.images.0 }}" class="card-img-top" alt="{{ pitch.name }}"
-                                     onerror="this.src='{{ default_pitch_image }}'">
-                            {% else %}
-                                <img src="{{ default_pitch_image }}" 
-                                     class="card-img-top" alt="{{ pitch.name }}">
-                            {% endif %}
+                        <div class="pitch-card-image-wrapper">
+                            <div class="pitch-card-image">
+                                {% if pitch.images and pitch.images|length > 0 %}
+                                    <img src="{{ pitch.images.0 }}" class="card-img-top" alt="{{ pitch.name }}"
+                                         onerror="this.src='{{ default_pitch_image }}'">
+                                {% else %}
+                                    <img src="{{ default_pitch_image }}" 
+                                         class="card-img-top" alt="{{ pitch.name }}">
+                                {% endif %}
+                            </div>
                             
-                            {% if pitch.is_available %}
-                                <span class="badge bg-success pitch-badge">Còn trống</span>
-                            {% else %}
-                                <span class="badge bg-secondary pitch-badge">Không có sẵn</span>
+                            {% if user.is_authenticated %}
+                            <form method="POST" action="{% url 'toggle_favorite' pitch.id %}" class="favorite-form-badge">
+                                {% csrf_token %}
+                                <button type="submit" class="favorite-badge-btn" title="Thêm vào yêu thích">
+                                    {% if pitch.is_favorited %}
+                                    <span class="heart-icon">❤️</span>
+                                    {% else %}
+                                    <span class="heart-icon">🤍</span>
+                                    {% endif %}
+                                </button>
+                            </form>
                             {% endif %}
                         </div>
-
+                        
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h5 class="card-title mb-0 pitch-card-title">

@@ -1,4 +1,178 @@
-{% extends 'main/base.html' %} {% block title %}Trang Chủ{% endblock %} 
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Quản lý đơn đặt sân{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_booking.css' %}">
+{% endblock %}
+
 {% block content %}
-<h1>Admin</h1>
+<div class="page-wrapper py-4">
+  <div class="page-header mb-4">
+    <div>
+      <p class="text-uppercase text-muted small mb-1">Quản trị hệ thống</p>
+      <h1 class="page-title mb-1">Quản lý đơn đặt sân</h1>
+      <p class="page-subtitle mb-0">Theo dõi trạng thái, chủ động xử lý và thông báo khách hàng</p>
+    </div>
+    <div class="page-meta text-end">
+      <span class="badge rounded-pill bg-dark-subtle text-dark fw-semibold">
+        Tổng: {{ bookings.paginator.count|default:0 }} đơn
+      </span>
+    </div>
+  </div>
+
+  <div class="card filter-card mb-4 border-0 shadow-sm">
+    <div class="card-body">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-lg-4 col-md-6">
+          <label class="form-label small text-muted mb-1">Trạng thái</label>
+          <select name="status" class="form-select">
+            <option value="">Tất cả</option>
+            {% for value, label in status_choices %}
+              <option value="{{ value }}" {% if value == status_filter %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+          <label class="form-label small text-muted mb-1">Từ ngày</label>
+          <input type="date" name="date_from" value="{{ date_from }}" class="form-control filter-input" placeholder="dd/mm/yyyy">
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+          <label class="form-label small text-muted mb-1">Đến ngày</label>
+          <input type="date" name="date_to" value="{{ date_to }}" class="form-control filter-input" placeholder="dd/mm/yyyy">
+        </div>
+
+        <div class="col-12 d-flex flex-wrap gap-2 mt-2">
+          <button type="submit" class="btn btn-dark px-4">
+            Lọc dữ liệu
+          </button>
+          <a href="{% url 'admin_booking_list' %}" class="btn btn-outline-secondary px-4">
+            Reset
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm table-card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Khách hàng</th>
+              <th>Email</th>
+              <th>Sân</th>
+              <th>Cơ sở</th>
+              <th>Ngày đặt</th>
+              <th>Giá cuối</th>
+              <th>Trạng thái</th>
+              <th class="text-end">Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for booking in bookings %}
+              <tr>
+                <td class="fw-semibold">#{{ booking.id }}</td>
+                <td>
+                  <div class="fw-semibold">{{ booking.user.full_name|default:booking.user.username }}</div>
+                  <small class="text-muted">ID: {{ booking.user_id }}</small>
+                </td>
+                <td>{{ booking.user.email|default:"-" }}</td>
+                <td>{{ booking.pitch.name }}</td>
+                <td>{{ booking.pitch.facility.name|default:"-" }}</td>
+                <td>{{ booking.booking_date|date:"d/m/Y" }}</td>
+                <td class="fw-semibold">{{ booking.final_price|floatformat:0 }} đ</td>
+                <td>
+                  {% if booking.status == booking_status.PENDING %}
+                    <span class="status-badge status-pending">Đang chờ</span>
+                  {% elif booking.status == booking_status.CONFIRMED %}
+                    <span class="status-badge status-confirmed">Đã xác nhận</span>
+                  {% elif booking.status == booking_status.REJECTED %}
+                    <span class="status-badge status-rejected">Bị từ chối</span>
+                  {% elif booking.status == booking_status.CANCELLED %}
+                    <span class="status-badge status-cancelled">Người dùng hủy</span>
+                  {% else %}
+                    <span class="status-badge">{{ booking.status }}</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  {% if booking.status == booking_status.PENDING %}
+                    <form method="post"
+                          action="{% url 'admin_update_booking_status' booking.id %}"
+                          class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="approve">
+                      <button type="submit"
+                              class="btn btn-sm btn-outline-success me-2"
+                              onclick="return confirm('Bạn có chắc chắn muốn duyệt đơn #{{ booking.id }} không?')">
+                        Duyệt
+                      </button>
+                    </form>
+                    <form method="post"
+                          action="{% url 'admin_update_booking_status' booking.id %}"
+                          class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="reject">
+                      <button type="submit"
+                              class="btn btn-sm btn-outline-danger"
+                              onclick="return confirm('Bạn có chắc chắn muốn từ chối đơn #{{ booking.id }} không?')">
+                        Từ chối
+                      </button>
+                    </form>
+                  {% else %}
+                    <span class="text-muted small">Đã xử lý</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="9">
+                  <div class="empty-state text-center py-5">
+                    <div class="empty-icon mb-3">⚽</div>
+                    <h5 class="mb-1">Chưa có đơn đặt sân</h5>
+                    <p class="text-muted mb-0">Những đơn mới nhất sẽ hiển thị tại đây để bạn xử lý nhanh chóng.</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if bookings.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+      <ul class="pagination justify-content-center">
+        {% if bookings.has_previous %}
+          <li class="page-item">
+            <a class="page-link"
+               href="?page={{ bookings.previous_page_number }}&status={{ status_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">«</a>
+          </li>
+        {% endif %}
+
+        {% for num in bookings.paginator.page_range %}
+          <li class="page-item {% if num == bookings.number %}active{% endif %}">
+            <a class="page-link"
+               href="?page={{ num }}&status={{ status_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">{{ num }}</a>
+          </li>
+        {% endfor %}
+
+        {% if bookings.has_next %}
+          <li class="page-item">
+            <a class="page-link"
+               href="?page={{ bookings.next_page_number }}&status={{ status_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">»</a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+</div>
 {% endblock %}

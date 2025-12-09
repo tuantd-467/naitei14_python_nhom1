@@ -1,7 +1,9 @@
 from django.contrib import admin
+from django.contrib import messages
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
     User, Facility, PitchType, TimeSlot, Pitch, PitchTimeSlot, Voucher,
-    Booking, Review, Comment, Favorite
+    Booking, Review, Comment, Favorite, BookingStatus
 )
 from . import constants
 
@@ -59,9 +61,44 @@ class PitchAdmin(admin.ModelAdmin):
     raw_id_fields = ('pitch_type', 'facility')
     inlines = [PitchTimeSlotInline]
     list_per_page = constants.ADMIN_LIST_PER_PAGE
-    
+
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('pitch_type', 'facility')
+
+    def has_delete_permission(self, request, obj=None):
+        """
+        Không cho xóa sân nếu còn đơn Pending/Confirmed.
+        """
+        if obj is None:
+            return super().has_delete_permission(request, obj)
+
+        has_blocking_booking = obj.bookings.filter(
+            status__in=[BookingStatus.PENDING, BookingStatus.CONFIRMED]
+        ).exists()
+        if has_blocking_booking:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def delete_model(self, request, obj):
+        if obj.bookings.filter(status__in=[BookingStatus.PENDING, BookingStatus.CONFIRMED]).exists():
+            messages.error(
+                request,
+                "Không thể xóa sân vì đang có đơn đặt sân ở trạng thái Đang chờ/Đã xác nhận."
+            )
+            return
+        return super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        blocked = queryset.filter(
+            bookings__status__in=[BookingStatus.PENDING, BookingStatus.CONFIRMED]
+        ).distinct()
+        if blocked.exists():
+            messages.error(
+                request,
+                "Một số sân không thể bị xóa vì đang có đơn đặt sân ở trạng thái Đang chờ/Đã xác nhận."
+            )
+        allowed = queryset.exclude(id__in=blocked.values_list("id", flat=True))
+        return super().delete_queryset(request, allowed)
 
 class PitchTimeSlotAdmin(admin.ModelAdmin):
     list_display = ('pitch', 'time_slot', 'is_available', 'get_price_per_slot', 'created_at')
@@ -157,4 +194,4 @@ admin.site.register(Voucher, VoucherAdmin)
 admin.site.register(Booking, BookingAdmin)
 admin.site.register(Review, ReviewAdmin)
 admin.site.register(Comment, CommentAdmin)
-admin.site.register(Favorite, FavoriteAdmin)
+admin.site.register(Favorite, FavoriteAdmin) 

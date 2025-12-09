@@ -58,9 +58,9 @@ build/
 /staticfiles/
 /mediafiles/
 
-# Migration files (tùy chọn - thường nên commit)
-# !/migrations/
-# !/migrations/**/__init__.py
+# Ignore migration files
+*/migrations/*.py
+!*/migrations/__init__.py
 
 # PyCharm
 .idea/
@@ -72,3 +72,5 @@ build/
 htmlcov/
 .coverage
 .coverage.*
+
+.env

@@ -1,5 +1,6 @@
 {% extends 'main/base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Đặt sân - {{ pitch.name }}{% endblock %}
 
@@ -73,10 +74,28 @@
                         </div>
                     </div>
 
+                    {% if user.is_authenticated %}
+                    <div class="mb-3">
+                        <form method="POST" action="{% url 'toggle_favorite' pitch.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger w-100 favorite-btn" id="favoriteBtn">
+                                <i class="fas fa-heart me-2"></i>
+                                <span id="favoriteBtnText">
+                                    {% if pitch.is_favorited %}
+                                    Bỏ yêu thích
+                                    {% else %}
+                                    Thêm vào yêu thích
+                                    {% endif %}
+                                </span>
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+
                     {% if pitch.pitch_type.description %}
-                    <div class="mb-3 pitch-type-desc">
-                        <h6 class="mb-2">Thông tin loại sân</h6>
-                        <p class="text-muted small mb-0">{{ pitch.pitch_type.description }}</p>
+                    <div class="alert alert-light border">
+                        <strong>Thông tin loại sân:</strong>
+                        <p class="mb-0 mt-2">{{ pitch.pitch_type.description }}</p>
                     </div>
                     {% endif %}
                 </div>
@@ -140,7 +159,6 @@
                                 </div>
                                 {% endfor %}
                             </div>
-                            
                             {% else %}
                             <div class="alert alert-warning">
                                 <i class="fas fa-exclamation-triangle me-2"></i>
