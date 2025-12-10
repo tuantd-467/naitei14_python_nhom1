@@ -1,0 +1,57 @@
+{% extends 'main/base.html' %}
+
+{% block title %}{% if is_edit %}Chỉnh sửa sân{% else %}Tạo sân mới{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 720px;">
+  <h1 class="h4 mb-3">{% if is_edit %}Chỉnh sửa sân{% else %}Tạo sân mới{% endif %}</h1>
+
+  <form method="post" enctype="multipart/form-data" class="card shadow-sm">
+    <div class="card-body">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Cơ sở</label>
+        {{ form.facility }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Tên sân</label>
+        {{ form.name }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Loại sân</label>
+        {{ form.pitch_type }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Giá cơ bản/giờ</label>
+        {{ form.base_price_per_hour }}
+      </div>
+      <div class="form-check mb-3">
+        {{ form.is_available }} <label class="form-check-label">Sẵn sàng cho đặt lịch</label>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">{{ form.multiple_images.label }}</label>
+        {{ form.multiple_images }}
+        <div class="form-text">Chọn nhiều ảnh để tải lên (sẽ thay thế danh sách ảnh hiện tại nếu upload mới).</div>
+      </div>
+
+      {% if is_edit and pitch.images %}
+      <div class="mb-3">
+        <label class="form-label">Ảnh hiện tại</label>
+        <div class="d-flex flex-wrap gap-2">
+          {% for img in pitch.images %}
+          <div class="border rounded" style="width:100px; height:80px; overflow:hidden;">
+            <img src="{{ MEDIA_URL }}{{ img }}" alt="img" style="width:100%; height:100%; object-fit:cover;">
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="card-footer bg-white d-flex justify-content-between">
+      <a href="{% url 'admin_pitch_list' %}" class="btn btn-outline-secondary">Hủy</a>
+      <button type="submit" class="btn btn-primary">Lưu</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+

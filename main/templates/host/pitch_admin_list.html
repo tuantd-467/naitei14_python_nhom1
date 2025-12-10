@@ -1,0 +1,70 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Quản lý sân bóng{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h4 mb-1">Quản lý sân bóng</h1>
+      <p class="text-muted mb-0">Tạo mới, chỉnh sửa và quản lý sân.</p>
+    </div>
+    <a href="{% url 'admin_pitch_create' %}" class="btn btn-primary">+ Thêm sân</a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tên sân</th>
+          <th>Loại sân</th>
+          <th>Cơ sở</th>
+          <th>Giá/giờ</th>
+          <th>Trạng thái</th>
+          <th>Ảnh</th>
+          <th class="text-end">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pitch in pitches %}
+        <tr>
+          <td>{{ pitch.id }}</td>
+          <td>{{ pitch.name }}</td>
+          <td>{{ pitch.pitch_type.name }}</td>
+          <td>{{ pitch.facility.name }}</td>
+          <td>{{ pitch.base_price_per_hour|floatformat:0 }} đ</td>
+          <td>
+            {% if pitch.is_available %}
+              <span class="badge bg-success">Sẵn sàng</span>
+            {% else %}
+              <span class="badge bg-secondary">Không sẵn sàng</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if pitch.images %}
+              <img src="{{ MEDIA_URL }}{{ pitch.images.0 }}" alt="{{ pitch.name }}" style="height:50px;object-fit:cover;border-radius:4px;">
+            {% else %}
+              <span class="text-muted small">Chưa có</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'admin_pitch_update' pitch.id %}" class="btn btn-sm btn-outline-primary me-2">Sửa</a>
+            <form action="{% url 'admin_pitch_delete' pitch.id %}" method="post" class="d-inline" onsubmit="return confirm('Xóa sân này?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center text-muted">Chưa có sân nào.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

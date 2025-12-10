@@ -1,6 +1,5 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from .models import Booking, Pitch, PitchTimeSlot, User, Review
 from datetime import date
@@ -196,3 +195,33 @@ class ReviewForm(forms.ModelForm):
             raise forms.ValidationError(
                 "Nội dung đánh giá phải có ít nhất 10 ký tự.")
         return content
+<<<<<<< HEAD
+
+
+class PitchForm(forms.ModelForm):
+    multiple_images = forms.FileField(
+        required=False,
+        widget=forms.ClearableFileInput(attrs={"multiple": True, "class": "form-control"}),
+        label="Ảnh sân (có thể chọn nhiều)"
+    )
+
+    class Meta:
+        model = Pitch
+        fields = ["facility", "name", "pitch_type", "base_price_per_hour", "is_available"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "base_price_per_hour": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "facility": forms.Select(attrs={"class": "form-select"}),
+            "pitch_type": forms.Select(attrs={"class": "form-select"}),
+            "is_available": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "name": "Tên sân",
+            "pitch_type": "Loại sân",
+            "base_price_per_hour": "Giá cơ bản/giờ",
+            "is_available": "Sẵn sàng cho đặt lịch",
+            "facility": "Cơ sở",
+        }
+
+    def clean_multiple_images(self):
+        return self.files.getlist("multiple_images")
