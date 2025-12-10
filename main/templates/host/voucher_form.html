@@ -1,0 +1,80 @@
+{% extends 'main/base.html' %}
+
+{% block title %}{% if is_edit %}Chỉnh sửa voucher{% else %}Tạo voucher{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h3 class="card-title mb-4">
+            {% if is_edit %}Chỉnh sửa voucher{% else %}Tạo voucher mới{% endif %}
+          </h3>
+          <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+
+            <div class="mb-3">
+              <label class="form-label">Mã voucher</label>
+              {{ form.code }}
+              {{ form.code.errors }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Mô tả</label>
+              {{ form.description }}
+              {{ form.description.errors }}
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Giảm (%)</label>
+                {{ form.discount_percent }}
+                {{ form.discount_percent.errors }}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Giới hạn lượt dùng</label>
+                {{ form.usage_limit }}
+                {{ form.usage_limit.errors }}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Giá trị tối thiểu</label>
+              {{ form.min_order_value }}
+              {{ form.min_order_value.errors }}
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Ngày bắt đầu</label>
+                {{ form.start_date }}
+                {{ form.start_date.errors }}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Ngày kết thúc</label>
+                {{ form.end_date }}
+                {{ form.end_date.errors }}
+              </div>
+            </div>
+
+            <div class="form-check form-switch mb-4">
+              {{ form.is_active }}
+              <label class="form-check-label ms-2" for="{{ form.is_active.id_for_label }}">Kích hoạt</label>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-dark">
+                {% if is_edit %}Lưu thay đổi{% else %}Tạo mới{% endif %}
+              </button>
+              <a href="{% url 'admin_voucher_list' %}" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

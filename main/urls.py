@@ -26,10 +26,16 @@ urlpatterns = [
     path('dashboard/bookings/<int:booking_id>/update-status/', views.admin_update_booking_status,
          name='admin_update_booking_status'),
     # Admin pitch CRUD
-    path('admin/pitches/', views.admin_pitch_list, name='admin_pitch_list'),
-    path('admin/pitches/create/', views.admin_pitch_create, name='admin_pitch_create'),
-    path('admin/pitches/<int:pitch_id>/edit/', views.admin_pitch_update, name='admin_pitch_update'),
-    path('admin/pitches/<int:pitch_id>/delete/', views.admin_pitch_delete, name='admin_pitch_delete'),
+    # Admin pitch CRUD (đổi prefix tránh trùng /admin/ của Django admin)
+    path('dashboard/pitches/', views.admin_pitch_list, name='admin_pitch_list'),
+    path('dashboard/pitches/create/', views.admin_pitch_create, name='admin_pitch_create'),
+    path('dashboard/pitches/<int:pitch_id>/edit/', views.admin_pitch_update, name='admin_pitch_update'),
+    path('dashboard/pitches/<int:pitch_id>/delete/', views.admin_pitch_delete, name='admin_pitch_delete'),
+    # Admin voucher CRUD
+    path('dashboard/vouchers/', views.admin_voucher_list, name='admin_voucher_list'),
+    path('dashboard/vouchers/create/', views.admin_voucher_create, name='admin_voucher_create'),
+    path('dashboard/vouchers/<int:voucher_id>/edit/', views.admin_voucher_update, name='admin_voucher_update'),
+    path('dashboard/vouchers/<int:voucher_id>/delete/', views.admin_voucher_delete, name='admin_voucher_delete'),
 
     path(
         'book/<int:pitch_id>/',

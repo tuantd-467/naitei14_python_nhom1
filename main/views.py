@@ -2,6 +2,7 @@
 import re
 import logging
 from datetime import datetime, date
+from decimal import Decimal
 from smtplib import SMTPException
 from django.db import transaction
 from django.core.mail import send_mail
@@ -32,7 +33,7 @@ from .utils import (
     verify_activation_token
 )
 from .decorators import user_or_admin_required
-from .forms import SignUpForm, BookingForm, DateSelectionForm, ReviewForm, PitchForm
+from .forms import SignUpForm, BookingForm, DateSelectionForm, ReviewForm, PitchForm, VoucherForm
 from .models import Booking, Facility, Pitch, PitchTimeSlot, PitchType, Voucher, BookingStatus, Favorite, Role, Review
 from . import constants
 from django.core.exceptions import ValidationError
@@ -494,6 +495,62 @@ def admin_pitch_delete(request, pitch_id):
     return redirect("admin_pitch_list")
 
 
+@login_required(login_url='login')
+def admin_voucher_list(request):
+    """Admin: danh sách voucher, CRUD điều hướng."""
+    if request.user.role != constants.ROLE_ADMIN:
+        return HttpResponseForbidden("Bạn không có quyền truy cập trang quản lý voucher.")
+
+    vouchers = Voucher.objects.all().order_by("-created_at")
+    return render(request, "host/voucher_list.html", {"vouchers": vouchers})
+
+
+@login_required(login_url='login')
+def admin_voucher_create(request):
+    if request.user.role != constants.ROLE_ADMIN:
+        return HttpResponseForbidden("Bạn không có quyền truy cập trang quản lý voucher.")
+
+    form = VoucherForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Tạo voucher thành công.")
+        return redirect("admin_voucher_list")
+
+    return render(request, "host/voucher_form.html", {"form": form, "is_edit": False})
+
+
+@login_required(login_url='login')
+def admin_voucher_update(request, voucher_id):
+    if request.user.role != constants.ROLE_ADMIN:
+        return HttpResponseForbidden("Bạn không có quyền truy cập trang quản lý voucher.")
+
+    voucher = get_object_or_404(Voucher, id=voucher_id)
+    form = VoucherForm(request.POST or None, instance=voucher)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Cập nhật voucher thành công.")
+        return redirect("admin_voucher_list")
+
+    return render(
+        request,
+        "host/voucher_form.html",
+        {"form": form, "is_edit": True, "voucher": voucher},
+    )
+
+
+@login_required(login_url='login')
+@require_POST
+def admin_voucher_delete(request, voucher_id):
+    if request.user.role != constants.ROLE_ADMIN:
+        return HttpResponseForbidden("Bạn không có quyền truy cập trang quản lý voucher.")
+
+    voucher = get_object_or_404(Voucher, id=voucher_id)
+    voucher.delete()
+    messages.success(request, "Đã xóa voucher.")
+    return redirect("admin_voucher_list")
+
+
 def home(request):
     q = request.GET.get("q", "")
     facilities = Facility.objects.all()
@@ -782,9 +839,9 @@ def pitch_list(request):
 
 
 def _apply_voucher_to_booking(booking, voucher_code, request):
-    """Helper: Apply voucher to booking if valid"""
+    """Helper: Apply voucher to booking if valid and not used by user before."""
     if not voucher_code:
-        return
+        return False
 
     is_valid_format, error_message = validate_voucher_code(voucher_code)
 
@@ -792,19 +849,34 @@ def _apply_voucher_to_booking(booking, voucher_code, request):
         messages.warning(
             request,
             f'{error_message}, đặt sân không áp dụng giảm giá.')
-        return
+        return False
 
     voucher_code_clean = voucher_code.strip().upper()
     try:
         voucher = Voucher.objects.get(code=voucher_code_clean)
-        if voucher.is_valid():
-            booking.voucher = voucher
-            messages.success(
-                request, f'Đã áp dụng mã giảm giá {voucher.discount_percent}%!')
-        else:
+        if not voucher.is_valid():
             messages.warning(request, constants.ERR_VOUCHER_INVALID)
+            return False
+
+        # Ensure a user only uses a voucher once (excluding rejected bookings)
+        already_used = Booking.objects.filter(
+            user=request.user,
+            voucher=voucher
+        ).exclude(status=BookingStatus.REJECTED).exists()
+
+        if already_used:
+            messages.warning(
+                request,
+                "Bạn đã sử dụng voucher này trước đó. Mỗi người chỉ dùng 1 lần.")
+            return False
+
+        booking.voucher = voucher
+        messages.success(
+            request, f'Đã áp dụng mã giảm giá {voucher.discount_percent}%!')
+        return True
     except Voucher.DoesNotExist:
         messages.warning(request, constants.ERR_VOUCHER_NOT_FOUND)
+        return False
 
 
 # ============= USER BOOKING VIEWS =============
@@ -821,11 +893,13 @@ def user_booking_create(request, pitch_id):
     """
     pitch = get_object_or_404(Pitch, id=pitch_id, is_available=True)
 
-    # Get booking date from GET or POST
+    # Get booking date and voucher code
     if request.method == 'POST':
         booking_date_str = request.POST.get('booking_date')
+        voucher_code = request.POST.get('voucher_code', '')
     else:
         booking_date_str = request.GET.get('date')
+        voucher_code = request.GET.get('voucher_code', '')
 
     booking_date = None
 
@@ -858,6 +932,8 @@ def user_booking_create(request, pitch_id):
             user=request.user, pitch=pitch).exists()
         can_review = has_booked and not has_reviewed
 
+    applied_discount_percent = None
+
     if booking_date:
         all_time_slots = PitchTimeSlot.objects.filter(
             pitch=pitch,
@@ -884,6 +960,28 @@ def user_booking_create(request, pitch_id):
             # Here we add all slots to choices so form validation passes "invalid choice" check,
             # availability is checked in Booking.clean() or manually.
             time_slot_choices.append((str(pts.id), pts.time_slot.name))
+
+        # Apply voucher preview for display if voucher_code provided
+        if voucher_code:
+            is_valid_format, error_message = validate_voucher_code(voucher_code)
+            if is_valid_format:
+                try:
+                    voucher_obj = Voucher.objects.get(code=voucher_code.strip().upper())
+                    if voucher_obj.is_valid():
+                        already_used = Booking.objects.filter(
+                            user=request.user,
+                            voucher=voucher_obj
+                        ).exclude(status=BookingStatus.REJECTED).exists() if request.user.is_authenticated else False
+                        if not already_used:
+                            applied_discount_percent = voucher_obj.discount_percent
+                except Voucher.DoesNotExist:
+                    pass
+            # If voucher invalid, just ignore for preview
+        if applied_discount_percent:
+            for slot in available_time_slots:
+                discounted = (slot['price'] * (Decimal(100) - Decimal(applied_discount_percent)) / Decimal(100)).quantize(Decimal('0.01'))
+                slot['discounted_price'] = discounted
+                slot['discount_percent'] = applied_discount_percent
 
     if request.method == 'POST':
         form = BookingForm(
@@ -930,7 +1028,7 @@ def user_booking_create(request, pitch_id):
                 messages.error(request, "Có lỗi xảy ra khi đặt sân.")
     else:
         form = BookingForm(
-            initial={'booking_date': booking_date},
+            initial={'booking_date': booking_date, 'voucher_code': voucher_code},
             time_slot_choices=time_slot_choices
         )
 
@@ -938,6 +1036,7 @@ def user_booking_create(request, pitch_id):
         'form': form,
         'pitch': pitch,
         'booking_date': booking_date,
+        'voucher_code': voucher_code,
         'available_time_slots': available_time_slots,
         'today': date.today().isoformat(),
         'default_pitch_image': constants.DEFAULT_PITCH_IMAGE,
@@ -1136,10 +1235,19 @@ def check_voucher_ajax(request):
     try:
         voucher = Voucher.objects.get(code=code_clean)
         if voucher.is_valid():
+            if request.user.is_authenticated:
+                has_used = Booking.objects.filter(
+                    user=request.user,
+                    voucher=voucher
+                ).exclude(status=BookingStatus.REJECTED).exists()
+                if has_used:
+                    return JsonResponse(
+                        {'valid': False, 'message': 'Bạn đã sử dụng voucher này rồi.'})
             return JsonResponse({
                 'valid': True,
                 'message': f'Mã giảm {voucher.discount_percent}% có hiệu lực!',
-                'discount_percent': voucher.discount_percent
+                'discount_percent': voucher.discount_percent,
+                'min_order_value': float(voucher.min_order_value) if voucher.min_order_value else None,
             })
         else:
             return JsonResponse(
@@ -1200,11 +1308,12 @@ def book_pitch(request, pitch_id):
         pitch=pitch
     ).exists()
 
-    selected_date = request.GET.get('booking_date', '')
-    voucher_code = request.GET.get('voucher_code', '')
+    selected_date = request.POST.get('booking_date', '') if request.method == 'POST' else request.GET.get('booking_date', '')
+    voucher_code = request.POST.get('voucher_code', '') or request.GET.get('voucher_code', '')
     date_form = DateSelectionForm(initial={'booking_date': selected_date})
     available_time_slots = []
     time_slot_choices = []
+    applied_discount_percent = None
 
     if selected_date:
         try:
@@ -1252,14 +1361,32 @@ def book_pitch(request, pitch_id):
             try:
                 voucher = Voucher.objects.get(code=voucher_code_clean)
                 if voucher.is_valid():
-                    voucher_message = f'Mã giảm giá {voucher.discount_percent}% có hiệu lực'
-                    voucher_message_type = 'text-success'
+                    already_used = Booking.objects.filter(
+                        user=request.user,
+                        voucher=voucher
+                    ).exclude(status=BookingStatus.REJECTED).exists()
+
+                    if already_used:
+                        voucher_message = 'Bạn đã sử dụng voucher này rồi. Mỗi người chỉ dùng 1 lần.'
+                        voucher_message_type = 'text-danger'
+                    else:
+                        applied_discount_percent = voucher.discount_percent
+                        voucher_message = f'Mã giảm giá {voucher.discount_percent}% có hiệu lực'
+                        voucher_message_type = 'text-success'
                 else:
                     voucher_message = 'Mã giảm giá không hợp lệ hoặc đã hết hạn'
                     voucher_message_type = 'text-danger'
             except Voucher.DoesNotExist:
                 voucher_message = 'Mã giảm giá không tồn tại'
                 voucher_message_type = 'text-danger'
+
+    if applied_discount_percent and available_time_slots:
+        for slot in available_time_slots:
+            discounted_price = (
+                slot['price'] * (Decimal(100) - Decimal(applied_discount_percent)) / Decimal(100)
+            ).quantize(Decimal('0.01'))
+            slot['discounted_price'] = discounted_price
+            slot['discount_percent'] = applied_discount_percent
 
     booking_form = BookingForm(
         initial={
@@ -1270,9 +1397,10 @@ def book_pitch(request, pitch_id):
     )
 
     if request.method == 'POST':
+        form_action = request.POST.get('form_action')
         booking_form = BookingForm(
             request.POST, time_slot_choices=time_slot_choices)
-        if booking_form.is_valid():
+        if booking_form.is_valid() and form_action != 'preview_voucher':
             booking_date = booking_form.cleaned_data['booking_date']
             time_slot_id = booking_form.cleaned_data['time_slot']
             voucher_code = booking_form.cleaned_data['voucher_code']
@@ -1300,7 +1428,16 @@ def book_pitch(request, pitch_id):
                             voucher = Voucher.objects.get(
                                 code=voucher_code_clean)
                             if voucher.is_valid():
-                                booking.voucher = voucher
+                                already_used = Booking.objects.filter(
+                                    user=request.user,
+                                    voucher=voucher
+                                ).exclude(status=BookingStatus.REJECTED).exists()
+                                if already_used:
+                                    messages.warning(
+                                        request,
+                                        "Bạn đã sử dụng voucher này trước đó. Mỗi người chỉ dùng 1 lần.")
+                                else:
+                                    booking.voucher = voucher
                             else:
                                 messages.warning(
                                     request, 'Mã giảm giá không hợp lệ, đặt sân không áp dụng giảm giá.')

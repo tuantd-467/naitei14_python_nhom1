@@ -153,8 +153,18 @@
                                         </div>
                                         <div class="text-primary fw-semibold">
                                             <i class="fas fa-tag me-1"></i>
-                                            {{ slot.price|floatformat:0 }}đ
+                                            {% if slot.discounted_price %}
+                                                <span class="text-muted text-decoration-line-through">{{ slot.price|floatformat:0 }}đ</span>
+                                                <span class="ms-1">{{ slot.discounted_price|floatformat:0 }}đ</span>
+                                            {% else %}
+                                                {{ slot.price|floatformat:0 }}đ
+                                            {% endif %}
                                         </div>
+                                        {% if slot.discounted_price %}
+                                        <div class="small text-success">
+                                            Giảm {{ slot.discount_percent }}% với voucher
+                                        </div>
+                                        {% endif %}
                                     </label>
                                 </div>
                                 {% endfor %}
@@ -180,9 +190,11 @@
                                        class="form-control"
                                        placeholder="Nhập mã giảm giá"
                                        value="{{ voucher_code }}">
-                                <button type="button" 
-                                        class="btn btn-outline-secondary" 
-                                        onclick="checkVoucher()">
+                                <button class="btn btn-outline-secondary" 
+                                        name="form_action"
+                                        value="preview_voucher"
+                                        form="bookingForm"
+                                        type="submit">
                                     <i class="fas fa-check me-1"></i>
                                     Kiểm tra
                                 </button>
@@ -212,7 +224,7 @@
                         </div>
 
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
+                            <button type="submit" class="btn btn-primary btn-lg" name="form_action" value="submit_booking">
                                 <i class="fas fa-check-circle me-2"></i>
                                 Xác nhận đặt sân
                             </button>
