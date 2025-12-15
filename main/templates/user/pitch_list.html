@@ -173,9 +173,9 @@
                         {% csrf_token %}
                         <button type="submit" class="favorite-badge-btn" title="Thêm vào yêu thích">
                             {% if pitch.is_favorited %}
-                            <span class="heart-icon">❤️</span>
+                            <i class="fas fa-heart text-danger"></i>
                             {% else %}
-                            <span class="heart-icon">🤍</span>
+                            <i class="far fa-heart text-danger"></i>
                             {% endif %}
                         </button>
                     </form>

@@ -1,0 +1,80 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Quản lý voucher{% endblock %}
+
+{% block content %}
+<div class="page-wrapper py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <p class="text-uppercase text-muted small mb-1">Quản trị hệ thống</p>
+      <h1 class="page-title mb-1">Quản lý voucher</h1>
+      <p class="page-subtitle mb-0">Tạo, chỉnh sửa và theo dõi tình trạng voucher</p>
+    </div>
+    <a href="{% url 'admin_voucher_create' %}" class="btn btn-dark">
+      <i class="fas fa-plus me-2"></i>Thêm voucher
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Mã</th>
+              <th>Giảm (%)</th>
+              <th>Giới hạn</th>
+              <th>Đã dùng</th>
+              <th>Ngày bắt đầu</th>
+              <th>Ngày kết thúc</th>
+              <th>Kích hoạt</th>
+              <th class="text-end">Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for voucher in vouchers %}
+            <tr>
+              <td class="fw-semibold">{{ voucher.code }}</td>
+              <td>{{ voucher.discount_percent }}%</td>
+              <td>{{ voucher.usage_limit|default:"-" }}</td>
+              <td>{{ voucher.used_count }}</td>
+              <td>{{ voucher.start_date|date:"d/m/Y"|default:"-" }}</td>
+              <td>{{ voucher.end_date|date:"d/m/Y"|default:"-" }}</td>
+              <td>
+                {% if voucher.is_active %}
+                  <span class="badge bg-success-subtle text-success">Kích hoạt</span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary">Tắt</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <a href="{% url 'admin_voucher_update' voucher.id %}" class="btn btn-sm btn-outline-primary me-2">
+                  <i class="fas fa-edit me-1"></i> Sửa
+                </a>
+                <form action="{% url 'admin_voucher_delete' voucher.id %}" method="post" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger"
+                          onclick="return confirm('Xóa voucher {{ voucher.code }}?');">
+                    <i class="fas fa-trash me-1"></i> Xóa
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8">
+                <div class="text-center py-5 text-muted">
+                  Chưa có voucher nào.
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

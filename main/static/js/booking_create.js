@@ -23,15 +23,9 @@ function selectTimeSlot(card) {
 
     card.classList.add('selected');
 
-    const { slotId, slotName, slotTime, slotPrice } = card.dataset;
+    const { slotId, slotName, slotTime, slotPrice, slotDiscountedPrice } = card.dataset;
 
     document.getElementById('selectedTimeSlot').value = slotId;
-    document.getElementById('selectedSlotName').textContent = slotName;
-    document.getElementById('selectedSlotTime').textContent = slotTime;
-    document.getElementById('selectedSlotPrice').textContent =
-        Number(slotPrice).toLocaleString(LOCALE);
-
-    document.getElementById('selectedSlotInfo').classList.remove('d-none');
 
     // Enable submit button
     const submitBtn = document.getElementById('submitBtn');
@@ -46,6 +40,28 @@ document.querySelectorAll('.time-slot-card').forEach(card => {
 
 
 // ============= VOUCHER CHECK =============
+let currentDiscountPercent = null;
+
+function applyDiscountToSlots(discountPercent) {
+    document.querySelectorAll('.time-slot-card').forEach(card => {
+        const basePrice = Number(card.dataset.slotPrice);
+        const priceTag = card.querySelector('.price-tag');
+        if (!priceTag) return;
+
+        if (discountPercent) {
+            const discounted = Math.round(basePrice * (100 - discountPercent) / 100);
+            card.dataset.slotDiscountedPrice = discounted;
+            priceTag.innerHTML = `
+                <span class="price-original text-decoration-line-through text-muted">${basePrice.toLocaleString(LOCALE)}đ</span>
+                <span class="price-discount ms-1 text-danger fw-semibold">${discounted.toLocaleString(LOCALE)}đ</span>
+            `;
+        } else {
+            delete card.dataset.slotDiscountedPrice;
+            priceTag.innerHTML = `<span class="price-original">${basePrice.toLocaleString(LOCALE)}đ</span>`;
+        }
+    });
+}
+
 async function checkVoucher() {
     const code = document.getElementById('voucherCode').value.trim();
     const messageDiv = document.getElementById('voucherMessage');
@@ -70,12 +86,19 @@ async function checkVoucher() {
 
         const data = await res.json();
 
-        messageDiv.textContent = data.valid
-            ? TEXT.MSG_VOUCHER_VALID
-            : TEXT.MSG_VOUCHER_INVALID;
+        if (data.valid) {
+            currentDiscountPercent = data.discount_percent;
+            messageDiv.textContent = `${TEXT.MSG_VOUCHER_VALID} (Giảm ${data.discount_percent}%)`;
+            applyDiscountToSlots(data.discount_percent);
+        } else {
+            currentDiscountPercent = null;
+            messageDiv.textContent = data.message || TEXT.MSG_VOUCHER_INVALID;
+            applyDiscountToSlots(null);
+        }
 
     } catch (err) {
         messageDiv.textContent = TEXT.MSG_VOUCHER_ERROR;
+        applyDiscountToSlots(null);
 
         // 3. Log error
         console.error({
